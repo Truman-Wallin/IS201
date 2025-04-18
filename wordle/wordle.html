@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wordle Clone</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121213;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: start;
+      height: 100vh;
+      margin: 0;
+      padding: 2rem;
+    }
+    #game {
+      display: grid;
+      grid-template-columns: repeat(5, 60px);
+      grid-gap: 5px;
+      margin-bottom: 20px;
+    }
+    .tile {
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      font-weight: bold;
+      background-color: #3a3a3c;
+      color: white;
+      text-transform: uppercase;
+      border: 2px solid #3a3a3c;
+    }
+    .correct {
+      background-color: #538d4e;
+      border-color: #538d4e;
+    }
+    .present {
+      background-color: #b59f3b;
+      border-color: #b59f3b;
+    }
+    .absent {
+      background-color: #3a3a3c;
+      border-color: #3a3a3c;
+    }
+    #keyboard {
+      display: flex;
+      flex-wrap: wrap;
+      max-width: 400px;
+      justify-content: center;
+    }
+    #keyboard button {
+      margin: 2px;
+      padding: 10px 15px;
+      font-size: 1em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <div id="keyboard"></div>
+
+  <script>
+    let validWords = [];
+    let targetWord = '';
+    const fallbackWords = ['apple', 'brave', 'crate', 'drape', 'eagle'];
+    const maxGuesses = 6;
+    let currentGuess = '';
+    let currentRow = 0;
+
+    const game = document.getElementById('game');
+    const keyboard = document.getElementById('keyboard');
+
+    const initGame = () => {
+      createGrid();
+      createKeyboard();
+      window.addEventListener('keydown', handleKeyPress);
+    };
+
+    const createGrid = () => {
+      game.innerHTML = '';
+      for (let i = 0; i < maxGuesses * 5; i++) {
+        const tile = document.createElement('div');
+        tile.classList.add('tile');
+        tile.id = `tile-${i}`;
+        game.appendChild(tile);
+      }
+    };
+
+    const createKeyboard = () => {
+      keyboard.innerHTML = '';
+      const keys = 'QWERTYUIOPASDFGHJKLZXCVBNM'.split('');
+      keys.forEach(letter => {
+        const btn = document.createElement('button');
+        btn.textContent = letter;
+        btn.addEventListener('click', () => handleKey(letter));
+        keyboard.appendChild(btn);
+      });
+
+      const enter = document.createElement('button');
+      enter.textContent = 'Enter';
+      enter.addEventListener('click', submitGuess);
+      keyboard.appendChild(enter);
+
+      const del = document.createElement('button');
+      del.textContent = 'Del';
+      del.addEventListener('click', deleteLetter);
+      keyboard.appendChild(del);
+    };
+
+    const handleKey = (letter) => {
+      if (currentGuess.length < 5) {
+        currentGuess += letter;
+        updateTiles();
+      }
+    };
+
+    const handleKeyPress = (e) => {
+      const key = e.key.toUpperCase();
+      if (/^[A-Z]$/.test(key)) {
+        handleKey(key);
+      } else if (key === 'BACKSPACE') {
+        deleteLetter();
+      } else if (key === 'ENTER') {
+        submitGuess();
+      }
+    };
+
+    const deleteLetter = () => {
+      currentGuess = currentGuess.slice(0, -1);
+      updateTiles();
+    };
+
+    const updateTiles = () => {
+      for (let i = 0; i < 5; i++) {
+        const tile = document.getElementById(`tile-${currentRow * 5 + i}`);
+        tile.textContent = currentGuess[i] || '';
+      }
+    };
+
+    const submitGuess = () => {
+      if (currentGuess.length !== 5) return;
+      const guess = currentGuess.toLowerCase();
+
+      if (!validWords.includes(guess)) {
+        alert('Not a valid word.');
+        return;
+      }
+
+      for (let i = 0; i < 5; i++) {
+        const tile = document.getElementById(`tile-${currentRow * 5 + i}`);
+        const letter = currentGuess[i].toUpperCase();
+        if (letter === targetWord[i]) {
+          tile.classList.add('correct');
+        } else if (targetWord.includes(letter)) {
+          tile.classList.add('present');
+        } else {
+          tile.classList.add('absent');
+        }
+      }
+
+      if (guess.toUpperCase() === targetWord) {
+        setTimeout(() => alert('🔥 You crushed it!'), 100);
+      } else if (currentRow === maxGuesses - 1) {
+        setTimeout(() => alert(`Game Over. The word was ${targetWord}.`), 100);
+      } else {
+        currentRow++;
+        currentGuess = '';
+      }
+    };
+
+    // Load word list
+    fetch('words.txt')
+      .then(res => res.text())
+      .then(text => {
+        validWords = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w.length === 5);
+        targetWord = validWords[Math.floor(Math.random() * validWords.length)].toUpperCase();
+        initGame();
+      })
+      .catch(() => {
+        alert('Could not load word list. Using fallback.');
+        validWords = fallbackWords;
+        targetWord = fallbackWords[Math.floor(Math.random() * fallbackWords.length)].toUpperCase();
+        initGame();
+      });
+  </script>
+</body>
+</html>
